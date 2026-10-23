@@ -14,7 +14,7 @@
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-typescript": "^6.0.0",
-    "@types/node": "^18.20.4",
+    "@types/node": "^18.19.130",
     "@types/yaml": "^1.9.7",
     "obsidian": "1.1.1",
     "rollup": "^2.39.0",
