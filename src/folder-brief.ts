@@ -1,5 +1,5 @@
 
-import { App, MarkdownView, TFile, } from "obsidian";
+import { App, MarkdownView, TFile, Component } from "obsidian";
 import { CardStyle, CardBlock, CardItem } from './card-item'
 
 // ------------------------------------------------------------
@@ -8,12 +8,14 @@ import { CardStyle, CardBlock, CardItem } from './card-item'
 
 export class FolderBrief {
     app: App;
+    component: Component;
     folderPath: string;
     briefMax: number;
     noteOnly: boolean;
 
-    constructor(app: App) {
+    constructor(app: App, component?: Component) {
         this.app = app;
+        this.component = component || new Component();
         this.folderPath = '';
         this.briefMax = 64;
         this.noteOnly = false;
@@ -38,7 +40,7 @@ export class FolderBrief {
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (view) {
                 let briefCards = await this.makeBriefCards(folderPath, notePath);
-                const cardsElem = briefCards.getDocElement(this.app);
+                const cardsElem = briefCards.getDocElement(this.app, this.component);
                 return cardsElem;
             }
         }
@@ -108,6 +110,7 @@ export class FolderBrief {
         var noteTitle = noteName.substring(0, noteName.length - 3);
         let card = new CardItem(noteTitle, CardStyle.Note);
         card.setTitleLink(notePath);
+        card.sourcePath = notePath;
 
         // read content
         let file = this.app.vault.getAbstractFileByPath(notePath);
@@ -125,11 +128,13 @@ export class FolderBrief {
             // content?
             var contentBrief = this.getContentBrief(contentOrg);
             if (contentBrief.length > 0) {
-                if (contentBrief.length > this.briefMax) {
-                    contentBrief = contentBrief.substring(0, this.briefMax);
-                    contentBrief += '...';
-                }
                 card.setAbstract(contentBrief);
+            }
+
+            // markdown content for Obsidian rendering
+            var mdBrief = this.getContentBriefMarkdown(contentOrg);
+            if (mdBrief.length > 0) {
+                card.setMarkdownBrief(mdBrief);
             }
 
             // foot note
@@ -215,14 +220,16 @@ export class FolderBrief {
         .replace(/`(.+?)`/g, '$1')
         .trim()
 
-        // try to get the first paragraph
+        // collect all paragraphs (not just the first)
         var contentBrief = '';
         content = '\n' + content + '\n';
         let regexP1 = new RegExp('\n([^\n|^#|^>])([^\n]+)\n', 'g'); 
         var match = null;
-        if ((match = regexP1.exec(content)) !== null) {
-            contentBrief = match[1] + match[2];
+        var paraList: string[] = [];
+        while ((match = regexP1.exec(content)) !== null) {
+            paraList.push(match[1] + match[2]);
         }
+        contentBrief = paraList.join(' ');
 
         // console.log('contentBrief', contentBrief);
         contentBrief = contentBrief.trim();
@@ -232,9 +239,6 @@ export class FolderBrief {
             let regexHead = new RegExp('^#{1,6}(?!#)(.*)[\r\n]', 'mg');
             while ((match = regexHead.exec(content)) !== null) {
                 contentBrief += match[1] + ', ';
-                if (contentBrief.length > this.briefMax) {
-                    break;
-                }
             }
             if (contentBrief.endsWith(', ')) {
                 contentBrief = contentBrief.substring(0, contentBrief.length-2);
@@ -243,5 +247,27 @@ export class FolderBrief {
 
         // return
         return contentBrief;
+    }
+
+    // Get the brief as Markdown (for rendering via Obsidian's renderer)
+    // Only removes YAML frontmatter, block images, and code blocks — preserves markdown formatting
+    getContentBriefMarkdown(contentOrg: string): string {
+        var content = contentOrg.trim();
+
+        // skip yaml head
+        if (content.startsWith('---\r') || content.startsWith('---\n')) {
+            const hPos2 = content.indexOf('---', 4);
+            if (hPos2 >= 0 && (content[hPos2 - 1] == '\n' || (content[hPos2 - 1] == '\r'))) {
+                content = content.substring(hPos2 + 4).trim();
+            }
+        }
+
+        // Remove code blocks (keep their content? no, drop them to avoid messy card layout)
+        content = content.replace(/(```[^\s]*\n[\s\S]*?\n```)/g, '');
+        // Remove block images (head image is handled separately)
+        content = content.replace(/\!\[\[(.*?)\]\]/g, '');
+        content = content.replace(/\!\[(.*?)\][\[\(].*?[\]\)]/g, '');
+
+        return content.trim();
     }
 }

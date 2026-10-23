@@ -1,5 +1,5 @@
 
-import { App, } from "obsidian";
+import { App, MarkdownRenderer, Component, TFile } from "obsidian";
 
 // ------------------------------------------------------------
 // Card block
@@ -34,12 +34,12 @@ export class CardBlock {
         return this.cards.length;
     }
 
-    getDocElement(app: App) {
+    getDocElement(app: App, component: Component) {
         const cardDiv = document.createElement('div');
         if (this.style == 'strip') {
             cardDiv.addClass('strip-card-band');
             for (var i in this.cards) {
-                let cardEl = this.cards[i].getBoxElement(app, this.imagePrefix);
+                let cardEl = this.cards[i].getBoxElement(app, this.imagePrefix, component);
                 cardEl.addClass('strip-card-view');
                 cardDiv.appendChild(cardEl);
             }
@@ -47,7 +47,7 @@ export class CardBlock {
         else { // default: this.style == 'card'
             cardDiv.addClass('cute-card-band');
             for (var i in this.cards) {
-                let cardEl = this.cards[i].getBoxElement(app, this.imagePrefix);
+                let cardEl = this.cards[i].getBoxElement(app, this.imagePrefix, component);
                 cardEl.addClass('cute-card-view');
                 cardDiv.appendChild(cardEl);
             }
@@ -122,6 +122,8 @@ export class CardItem {
     title: string;
     titleLink: string;
     abstract: string;
+    markdownBrief: string;  // raw markdown for Obsidian renderMarkdown
+    sourcePath: string;     // source file path for resolving relative links
     footnote: string;
 
     constructor(title: string, style: CardStyle) {
@@ -148,6 +150,10 @@ export class CardItem {
 
     setAbstract(abstract: string) {
         this.abstract = abstract;
+    }
+
+    setMarkdownBrief(md: string) {
+        this.markdownBrief = md;
     }
 
     setFootnote(footnote: string) {
@@ -201,10 +207,46 @@ export class CardItem {
         return yamlStr;
     }
 
-    getBoxElement(app: App, imagePrefix: string) {
+    getBoxElement(app: App, imagePrefix: string, component: Component) {
         let cardEl = document.createElement('div');
         // Heading
         let headEl = cardEl.appendChild(document.createElement('div'));
+
+        // 如果存在 titleLink，让 headEl 可点击跳转
+        if (this.titleLink) {
+            headEl.addClass('mod-clickable');
+            headEl.setAttr('role', 'link');
+            headEl.setAttr('tabindex', '0');
+
+            const navigate = () => {
+                console.log("click item")
+                if (this.titleLink.endsWith('.md')) {
+                    // Obsidian 内部链接
+                    const file = app.vault.getAbstractFileByPath(this.titleLink);
+                    if (file instanceof TFile) {
+                        app.workspace.getLeaf(false).openFile(file);
+                    } else {
+                        // 退化处理：交给 Obsidian 的链接处理器
+                        window.open(this.titleLink, '_blank');
+                    }
+                } else {
+                    window.open(this.titleLink, '_blank');
+                }
+            };
+
+            headEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate();
+            });
+            headEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate();
+                }
+            });
+        }
+
         if (this.headImage) {
             this.cardStyle = CardStyle.Image;
             if (this.headImage.startsWith("#")) {
@@ -240,37 +282,46 @@ export class CardItem {
         }
         else if (this.cardStyle == CardStyle.Folder) {
             headEl.addClasses(['thumb-color', 'thumb-color-folder']);
-            headEl.textContent = 'Folder';
+            // headEl.textContent = '目录';
+            headEl.textContent = this.title;
         }
         else if (this.cardStyle == CardStyle.Note) {
             headEl.addClasses(['thumb-color', 'thumb-color-note']);
-            headEl.textContent = 'Note';
+            // headEl.textContent = '随笔';
+            headEl.textContent = this.title;
         }
         // article
         let articleEl = cardEl.appendChild(document.createElement('article'));
-        // Title
-        if (this.titleLink) {
-            let titleEl = articleEl.appendChild(document.createElement('a'));
-            if (this.titleLink.endsWith('.md')) {
-                titleEl.addClass('internal-link');
-            }
-            titleEl.href = this.titleLink;
-            let h1El = document.createElement('h1');
-            h1El.textContent = this.title;
-            titleEl.appendChild(h1El);
+        // // Title
+        // if (this.titleLink) {
+        //     let titleEl = articleEl.appendChild(document.createElement('a'));
+        //     if (this.titleLink.endsWith('.md')) {
+        //         titleEl.addClass('internal-link');
+        //     }
+        //     titleEl.href = this.titleLink;
+        //     let h1El = document.createElement('h1');
+        //     h1El.textContent = this.title;
+        //     titleEl.appendChild(h1El);
+        // }
+        // else {
+        //     let titleEl = articleEl.appendChild(document.createElement('h1'));
+        //     titleEl.textContent = this.title;
+        // }
+        // abstract / markdown content
+        let briefEl = articleEl.appendChild(document.createElement('div'));
+        briefEl.addClass('card-brief');
+        if (this.markdownBrief && this.markdownBrief.length > 0) {
+            // use Obsidian's built-in markdown renderer for rich preview
+            const srcPath = this.sourcePath || '';
+            MarkdownRenderer.renderMarkdown(this.markdownBrief, briefEl, srcPath, component);
+        } else if (this.abstract) {
+            briefEl.textContent = this.abstract;
         }
-        else {
-            let titleEl = articleEl.appendChild(document.createElement('h1'));
-            titleEl.textContent = this.title;
-        }
-        // abstract
-        let briefEl = articleEl.appendChild(document.createElement('p'));
-        briefEl.textContent = this.abstract;
-        // footnote
-        if (this.footnote) {
-            let footEl = articleEl.appendChild(document.createElement('span'));
-            footEl.textContent = this.footnote;
-        }
+        // // footnote
+        // if (this.footnote) {
+        //     let footEl = articleEl.appendChild(document.createElement('span'));
+        //     footEl.textContent = this.footnote;
+        // }
         // close
         return cardEl;
     }

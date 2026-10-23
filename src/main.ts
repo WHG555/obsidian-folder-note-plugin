@@ -35,7 +35,7 @@ export default class FolderNotePlugin extends Plugin {
         // for ccard rendering
         this.registerMarkdownCodeBlockProcessor('ccard', async (source, el, ctx) => {
             // run processer
-            let proc = new ccardProcessor(this.app);
+            let proc = new ccardProcessor(this.app, this);
             await proc.run(source, el, ctx, this.folderNote);
         });
 
@@ -46,6 +46,17 @@ export default class FolderNotePlugin extends Plugin {
         // for remove folder
         this.registerEvent(this.app.vault.on('delete', 
             (file) => this.handleFileDelete(file) ));
+
+        // auto-refresh folder brief cards when notes change
+        this.registerEvent(this.app.vault.on('modify', (file) => {
+            this.scheduleRefresh();
+        }));
+        this.registerEvent(this.app.vault.on('create', (file) => {
+            this.scheduleRefresh();
+        }));
+        this.registerEvent(this.app.vault.on('delete', (file) => {
+            this.scheduleRefresh();
+        }));
 
         // for settings
         this.addSettingTab(new FolderNoteSettingTab(this.app, this));
@@ -138,5 +149,43 @@ export default class FolderNotePlugin extends Plugin {
     async handleFileDelete(pathToDel: any) {
         if (!this.settings.folderDelete2Note) return;
         this.folderNote.deleteFolder(pathToDel.path);
+    }
+
+    // ------------------------------------------------------------
+    // Auto-refresh folder brief cards
+    // ------------------------------------------------------------
+
+    private _refreshTimer: number | null = null;
+
+    // Debounce: aggregate rapid file changes into a single refresh
+    scheduleRefresh() {
+        if (this._refreshTimer !== null) {
+            window.clearTimeout(this._refreshTimer);
+        }
+        this._refreshTimer = window.setTimeout(() => {
+            this._refreshTimer = null;
+            this.refreshOpenMarkdownViews();
+        }, 400);
+    }
+
+    // Re-render all open markdown preview views so ccard blocks re-read latest content
+    async refreshOpenMarkdownViews() {
+        const leaves = this.app.workspace.getLeavesOfType('markdown');
+        for (const leaf of leaves) {
+            const view = leaf.view as MarkdownView;
+            if (!view || !view.file) continue;
+            if (!view.previewMode) continue;
+            try {
+                // Re-read file content and re-set it to force Obsidian to
+                // re-parse the markdown and re-run code block processors
+                const data = await this.app.vault.read(view.file);
+                view.previewMode.set(data, true);
+            } catch (e) {
+                // fallback: try simple full re-render
+                try {
+                    view.previewMode.rerender(true);
+                } catch {}
+            }
+        }
     }
 }

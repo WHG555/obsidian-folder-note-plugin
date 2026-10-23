@@ -23,11 +23,11 @@ export interface FolderNotePluginSettings {
 export const FOLDER_NOTE_DEFAULT_SETTINGS: FolderNotePluginSettings = {
     folderNoteHide: true,
     folderNoteType: 'inside',
-    folderNoteName: '_about_',
+    folderNoteName: '_索引_',
     folderNoteKey: 'ctrl',
     folderNoteAutoRename: true,
     folderDelete2Note: false,
-    folderNoteStrInit: '# {{FOLDER_NAME}} Overview\n {{FOLDER_BRIEF_LIVE}} \n'
+    folderNoteStrInit: '# {{FOLDER_NAME}} 预览\n {{FOLDER_BRIEF_LIVE}} \n'
 }
 
 // ------------------------------------------------------------
@@ -46,16 +46,16 @@ export class FolderNoteSettingTab extends PluginSettingTab {
         let { containerEl } = this;
 
         containerEl.empty();
-        containerEl.createEl('h2', { text: 'Folder Note Plugin: Settings.' });
+        containerEl.createEl('h2', { text: '文件夹笔记: 设置' });
 
         new Setting(containerEl)
-            .setName('Note File Method')
-            .setDesc('Select the method to put your folder note file. (Read doc for more information.)')
+            .setName('笔记文件方法')
+            .setDesc('选择放置文件夹备注文件的方法。(阅读文档了解更多信息。)')
             .addDropdown(dropDown =>
                 dropDown
-                .addOption('index', 'Index File')
-                .addOption('inside', 'Folder Name Inside')
-                .addOption('outside', 'Folder Name Outside')
+                .addOption('index', '索引文件')
+                .addOption('inside', '文件夹名称置于内部')
+                .addOption('outside', '文件夹名称置于外部')
                 .setValue(this.plugin.settings.folderNoteType || 'inside')
                 .onChange((value: string) => {
                     this.plugin.settings.folderNoteType = value;
@@ -65,8 +65,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.folderNoteType == 'index') {
             new Setting(containerEl)
-                .setName('Index File Name')
-                .setDesc('Set the index file name for folder note. (only for the Index method)')
+                .setName('索引文件名称')
+                .setDesc('设置文件夹备注的索引文件名。（仅适用于索引方法）')
                 .addText(text => text
                     .setValue(this.plugin.settings.folderNoteName)
                     .onChange(async (value) => {
@@ -77,8 +77,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
         }
 
         new Setting(containerEl)
-            .setName('Inital Content')
-            .setDesc('Set the inital content for new folder note. {{FOLDER_NAME}} will be replaced with current folder name.')
+            .setName('初始内容')
+            .setDesc('设置新建文件夹备注的初始内容。{{FOLDER_NAME}} 将被替换为当前文件夹名称.')
             .addTextArea(text => {
                 text
                     .setPlaceholder('About the folder.')
@@ -96,8 +96,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
             });
         
         new Setting(containerEl)
-            .setName('Key for New Note')
-            .setDesc('Key + Click a folder to create folder note file. ')
+            .setName('新笔记的按键')
+            .setDesc('按住按键并点击文件夹以创建文件夹笔记文件。')
             .addDropdown(dropDown =>
                 dropDown
                 .addOption('ctrl', 'Ctrl + Click')
@@ -109,8 +109,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
                 }));
         
         new Setting(containerEl)
-            .setName('Hide Folder Note')
-            .setDesc('Hide the folder note file in the file explorer panel.')
+            .setName('隐藏文件夹笔记')
+            .setDesc('在文件资源管理器面板中隐藏文件夹备注文件。')
             .addToggle((toggle) => {
                 toggle.setValue(this.plugin.settings.folderNoteHide);
                 toggle.onChange(async (value) => {
@@ -121,8 +121,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
         
         if (this.plugin.settings.folderNoteType != 'index') {
             new Setting(containerEl)
-                .setName('Auto Rename')
-                .setDesc('Try to automatically rename the folder note if a folder name is changed. (Experimental)')
+                .setName('自动重命名')
+                .setDesc('尝试在文件夹名称更改时自动重命名文件夹备注。（实验性功能）')
                 .addToggle((toggle) => {
                     toggle.setValue(this.plugin.settings.folderNoteAutoRename);
                     toggle.onChange(async (value) => {
@@ -134,8 +134,8 @@ export class FolderNoteSettingTab extends PluginSettingTab {
         
         if (this.plugin.settings.folderNoteType == 'outside') {
             new Setting(containerEl)
-                .setName('Delete Folder Note')
-                .setDesc('Try to delete folder note when a folder is deleted. (Dangerous)')
+                .setName('删除文件夹笔记')
+                .setDesc('尝试在删除文件夹时删除文件夹笔记。（危险操作）')
                 .addToggle((toggle) => {
                     toggle.setValue(this.plugin.settings.folderDelete2Note);
                     toggle.onChange(async (value) => {

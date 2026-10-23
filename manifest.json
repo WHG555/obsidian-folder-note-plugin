@@ -1,10 +1,10 @@
 {
 	"id": "folder-note-plugin",
-	"name": "Folder Note",
-	"version": "0.7.3",
-	"minAppVersion": "0.9.12",
-	"description": "Click a folder node to show a note describing the folder.",
-	"author": "xpgo",
-	"authorUrl": "https://github.com/xpgo/obsidian-folder-note",
+	"name": "文件夹笔记",
+	"version": "1.0.0",
+	"minAppVersion": "1.1.1",
+	"description": "点击文件夹节点以显示描述该文件夹内所有笔记",
+	"author": "rorange",
+	"authorUrl": "https://github.com/WHG555",
 	"isDesktopOnly": false
 }

@@ -1,5 +1,5 @@
 
-import { App, MarkdownView, MarkdownPostProcessorContext} from "obsidian";
+import { App, MarkdownView, MarkdownPostProcessorContext, Component } from "obsidian";
 import { FolderBrief } from './folder-brief';
 import { FolderNote } from './folder-note';
 import { CardBlock } from './card-item';
@@ -11,9 +11,11 @@ import * as Yaml from 'yaml';
 
 export class ccardProcessor {
     app: App;
+    component: Component;
 
-    constructor(app: App) {
+    constructor(app: App, component: Component) {
         this.app = app;
+        this.component = component;
     }
     
     async run(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext, folderNote: FolderNote) {
@@ -50,7 +52,7 @@ export class ccardProcessor {
         if (yaml.items && (yaml.items instanceof Array)) {
             let cardBlock = new CardBlock();
             cardBlock.fromYamlCards(yaml);
-            const cardsElem = cardBlock.getDocElement(this.app);
+            const cardsElem = cardBlock.getDocElement(this.app, this.component);
             return cardsElem;
         }
         return null;
@@ -72,7 +74,7 @@ export class ccardProcessor {
         if (folderPath.length > 0) {
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (view) {
-                let folderBrief = new FolderBrief(this.app);
+                let folderBrief = new FolderBrief(this.app, this.component);
 
                 // brief options
                 if (yaml.briefMax) {
@@ -87,7 +89,7 @@ export class ccardProcessor {
                 briefCards.fromYamlOptions(yaml);
                 
                 // generate el
-                const ccardElem = briefCards.getDocElement(this.app);
+                const ccardElem = briefCards.getDocElement(this.app, this.component);
                 return ccardElem;
             }
         }
